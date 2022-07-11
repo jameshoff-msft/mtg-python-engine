@@ -108,6 +108,92 @@ class Player():
             # zone.ZoneType.COMMAND: self.command
         }[zone_type]
 
+    def get_untapped_mana(self):
+        counter = 0
+        for _land in self.battlefield.elements:
+            if _land.is_land and not _land.status.tapped:
+                print("mana")
+                counter += 1
+        return counter
+
+    def could_play(self):
+        options = []
+        for card in self.hand.elements:
+            # try:
+            #     # 'p 3' == plays third card in hand
+            #     num = int(answer[2:])
+            #     assert num < len(self.hand)
+            #     card = self.hand[num]
+            # except:
+            #     name = answer[2:]  # 'p Island' == plays 'Island'
+            #     card = self.hand.get_card_by_name(name)
+            #     assert card
+            #     # timing & restrictions
+            can_play = True
+            if card.is_land and self.landPlayed >= self.landPerTurn:
+                can_play = False
+
+            if not (card.is_instant or card.has_ability('Flash')) and (
+                    self.game.stack
+                    or self.game.step.phase not in [
+                        gamesteps.Phase.PRECOMBAT_MAIN,
+                        gamesteps.Phase.POSTCOMBAT_MAIN]
+                    or not self.is_active):
+                can_play = False
+
+            # choose targets
+            if can_play:
+                can_target = card.targets()
+                
+            # pay mana costs
+            if can_play and can_target:
+                can_pay = False
+                cost = card.manacost
+                creatures_to_tap = []
+
+                if card.has_ability("Convoke"):
+                    untapped_creatures = [
+                        c for c in self.creatures if not c.status.tapped]
+                    print("Your creatures: {}".format(untapped_creatures))
+                    ans = self.make_choice("What creatures would you like to tap"
+                                            " to pay for %s? (Convoke) " % card)
+
+                    ans = ans.split(" ")
+                    for ind in ans:
+                        try:
+                            ind = int(ind)
+                            _creature = untapped_creatures[ind]
+                            if not _creature.status.tapped and _creature not in creatures_to_tap:
+                                color = _creature.characteristics.color
+                                if not color:
+                                    color = 'C'
+                                elif len(color) > 1:
+                                    color = self.make_choice(
+                                        "What color would you like to add? {}".format(color))
+                                    assert color in mana.manachr
+                                else:
+                                    color = color[0]
+
+                                color = mana.chr_to_mana(color)
+                                creatures_to_tap.append(_creature)
+                                if cost[color]:
+                                    cost[color] -= 1
+                                else:
+                                    if cost[mana.Mana.GENERIC]:
+                                        cost[mana.Mana.GENERIC] -= 1
+                                    else:
+                                        raise ValueError
+
+                        except (IndexError, ValueError):
+                            print("error processing creature for convoke")
+                            pass
+
+                could_pay = self.mana.could_pay(cost) 
+                if can_play and can_target and could_pay:
+                    print("Could Play : {}".format(card.name))
+                    options.append(card)  
+        return
+
 
     def get_action(self):
         """ asks the player to do something
@@ -123,6 +209,9 @@ class Player():
                     self.name,
                     '*' if self.is_active else '',
                     self.game.step))
+
+            self.get_untapped_mana()
+            self.could_play()
 
             if self.game.test:
                 print("\t" + self.name + ", " +

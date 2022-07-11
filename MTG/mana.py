@@ -159,6 +159,51 @@ class ManaPool():
 
         return manacost
 
+    def could_pay(self, manacost, convoke=False):
+        """manacost here is a string, e.g. 2U, or a dict of Manas (e.g. {Mana.BLUE, 3})
+
+        This returns False if not possible, or a cost dict of Mana(Enum)s
+         that can be passed to self.pay for actual payment
+
+        This determines generic mana and converts it to actual colored mana
+
+        Note this DOES NOT pay any mana
+        """
+        if manacost is None:
+            return True
+
+        if isinstance(manacost, str):
+            manacost = self.determine_costs(manacost)
+
+        genericMana = manacost[Mana.GENERIC]
+
+        if genericMana > 0:
+            choice = ''
+
+            if re.match('[WUBRGC]+', choice) and len(choice) == genericMana:
+                for c in choice:
+                    manacost[chr_to_mana(c)] += 1
+                genericMana = 0
+            else:  # default
+                # print("automatic payment...\n")
+                for mana in Mana:
+                    if genericMana == 0:
+                        break
+                    if self.pool[mana] > manacost[mana]:
+                        amount = min(self.pool[mana] - manacost[mana], genericMana)
+                        manacost[mana] += amount
+                        genericMana -= amount
+
+        manacost[Mana.GENERIC] = genericMana
+        if genericMana > 0:
+            return False
+
+        for mana in Mana:
+            if self.pool[mana] < manacost[mana]:
+                return False
+
+        return manacost
+
     def clear(self):
         self.pool.clear()
 

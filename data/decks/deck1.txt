@@ -1,6 +1,3 @@
-12 Plains
-1 Oreskos Swiftclaw
-6 Soulmender
-3 Sungrace Pegasus
-6 Ajani's Pridemate
-2 Tireless Missionaries
+30 Plains
+10 Oreskos Swiftclaw
+8 Soulmender
